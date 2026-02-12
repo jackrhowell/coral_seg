@@ -19,10 +19,13 @@ rad.json
 #License-file
 *.flf
 #Test results file
+TestResults.xml
+
+# Other files to ignore
 results/
 data/
 .ipynb_checkpoints/
 .DS_Store
 lightning_logs/
 __pycache__/
-TestResults.xml
+.logs/
