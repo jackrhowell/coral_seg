@@ -20,9 +20,10 @@ def main():
 
     # Configure hyperparameters
     batch_size = 8 
-    epochs = 30
+    epochs = 1000
     split_ratio = 0.8
     num_workers = 4
+    learning_rate = 3e-4
     samples_per_image = 100
     crop_size = (512, 512)
 
@@ -45,7 +46,7 @@ def main():
     print(example_batch)
 
     # Initialize the model
-    model = CoralSegFormer(learning_rate=3e-4)
+    model = CoralSegFormer(learning_rate=learning_rate)
 
     # Callbacks
     checkpoint_callback = ModelCheckpoint(
@@ -58,7 +59,7 @@ def main():
 
     early_stop_callback = EarlyStopping(
         monitor='val_loss',
-        patience=5,
+        patience=10,
         mode='min'
     )
 

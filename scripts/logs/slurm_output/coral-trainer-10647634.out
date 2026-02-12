@@ -1,0 +1,17 @@
+This is job  task running on gn-16-14-00
+Scanning /home/jrhowell/sadow_koastore/shared/coral_seg/coral_seg/data/...
+Found 0 valid image/mask pairs.
+Training on 0 images.
+Validating on 0 images.
+Traceback (most recent call last):
+  File "/mnt/lustre/koa/koastore/sadow_group/shared/coral_seg/coral_seg/scripts/train.py", line 83, in <module>
+    main()
+  File "/mnt/lustre/koa/koastore/sadow_group/shared/coral_seg/coral_seg/scripts/train.py", line 40, in main
+    train_loader = data_module.train_dataloader()
+  File "/mnt/lustre/koa/koastore/sadow_group/shared/coral_seg/coral_seg/scripts/dataset.py", line 143, in train_dataloader
+    return DataLoader(
+  File "/home/jrhowell/.conda/envs/coral_seg_v2/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 388, in __init__
+    sampler = RandomSampler(dataset, generator=generator)  # type: ignore[arg-type]
+  File "/home/jrhowell/.conda/envs/coral_seg_v2/lib/python3.10/site-packages/torch/utils/data/sampler.py", line 162, in __init__
+    raise ValueError(
+ValueError: num_samples should be a positive integer value, but got num_samples=0
