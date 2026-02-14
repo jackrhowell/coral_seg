@@ -18,6 +18,8 @@
 # Load python profile and activate environment
 ## source ~/profiles/auto.profile
 module load lang/Anaconda3
+
+source ~/.bashrc
 source activate coral_seg_v2
 
 # use this command to run a python script
