@@ -1,8 +1,8 @@
 #!/bin/bash
-# See https://slurm.schedmd.com/job_array.html
-# See https://uhawaii.atlassian.net/wiki/spaces/HPC/pages/430407770/The+Basics+Partition+Information+on+Koa for KOA partition info
+#See https://slurm.schedmd.com/job_array.html
+#See https://uhawaii.atlassian.net/wiki/spaces/HPC/pages/430407770/The+Basics+Partition+Information+on+Koa for KOA partition info
 
-#SBATCH --partition=gpu #gpu,kill-shared #sadow, gpu, shared, kill-shared, exclusive-long
+SBATCH --partition=gpu #gpu,kill-shared #sadow, gpu, shared, kill-shared, exclusive-long
 
 SBATCH --gres=gpu:1
 SBATCH --cpus-per-task=4 ## cores per task
