@@ -2,7 +2,6 @@
 set -euo pipefail
 
 # Echo commands for easier debugging in slurm output
-set -x
 #See https://slurm.schedmd.com/job_array.html
 #See https://uhawaii.atlassian.net/wiki/spaces/HPC/pages/430407770/The+Basics+Partition+Information+on+Koa for KOA partition info
 
@@ -25,8 +24,6 @@ mkdir -p ./logs/slurm_output
 # Load python profile and activate environment
 ## source ~/profiles/auto.profile
 module load lang/Anaconda3
-
-source ~/.bashrc
 conda activate coral_seg_v2
 
 echo "Host: $HOSTNAME"
@@ -46,6 +43,6 @@ python evaluate_gp.py
 # jupyter nbconvert file.ipynb --to python
 # python file.py
 
-echo "This is job ${SLURM_JOB_ID:-unknown} (array_task=${SLURM_ARRAY_TASK_ID:-none}) running on $HOSTNAME"
+echo "This is job $SLURM_ARRAY_JOB_ID task running on $HOSTNAME"
 
 python train.py
