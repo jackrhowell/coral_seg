@@ -14,9 +14,9 @@ def main():
     # UPDATE ME!
     # Configure paths
     user = "jrhowell"
-    dataset_dir = f"/home/{user}/sadow_koastore/shared/coral_seg/coral_seg/data/"
-    results_dir = f"/home/{user}/sadow_koastore/shared/coral_seg/coral_seg/results/"
-    checkpoint_dir = f"{results_dir}/checkpoints_2.12.2026/"
+    dataset_dir = f"/home/{user}/sadow_koastore/shared/coral_seg/data/"
+    results_dir = f"/home/{user}/sadow_koastore/shared/coral_seg/results/"
+    checkpoint_dir = f"{results_dir}/checkpoints_2.13.2026/"
 
     # Configure hyperparameters
     batch_size = 8 
