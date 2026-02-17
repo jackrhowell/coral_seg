@@ -28,4 +28,4 @@ data/
 .DS_Store
 lightning_logs/
 __pycache__/
-.logs/
+logs/

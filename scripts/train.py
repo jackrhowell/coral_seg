@@ -10,6 +10,13 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 
+print("CUDA available:", torch.cuda.is_available())
+print("Torch version:", torch.__version__)
+print("CUDA version:", torch.version.cuda)
+print("Device count:", torch.cuda.device_count())
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.enabled = False # As a last resort test
+
 def main():
     # UPDATE ME!
     # Configure paths
