@@ -25,7 +25,7 @@ def main():
     results_dir = f"/home/{user}/benthic_ecology_group/Jack/coral_seg/results/"
     
     #change for the date
-    checkpoint_dir = f"{results_dir}/checkpoints_2.13.2026/"
+    checkpoint_dir = f"{results_dir}/checkpoints_4.25.2026/"
 
     # Set to None for fresh training
     # Or set to your .ckpt path to load from checkpoint
@@ -35,7 +35,7 @@ def main():
     resume_training = True
 
     # Configure hyperparameters
-    batch_size = 16 
+    batch_size = 8 
     epochs = 1000
     split_ratio = 0.8
     num_workers = 4
@@ -59,7 +59,7 @@ def main():
 
     # Load an example batch to determine input shape
     example_batch = next(iter(train_loader))
-        print(example_batch.keys() if isinstance(example_batch, dict) else type(example_batch))
+    print(example_batch.keys() if isinstance(example_batch, dict) else type(example_batch))
 
     # Initialize the model
     if checkpoint_path is not None and Path(checkpoint_path).exists():
@@ -108,7 +108,7 @@ def main():
         trainer.fit(model, datamodule=data_module, ckpt_path=checkpoint_path)
     else:
         print("Starting new training run...")
-        trainer.fit(model, data_module)
+        trainer.fit(model, datamodule=data_module)
 
     print(f"Completed training. Files can be found in {checkpoint_dir}")
 
