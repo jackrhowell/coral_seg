@@ -29,13 +29,13 @@ def main():
 
     # Set to None for fresh training
     # Or set to your .ckpt path to load from checkpoint
-    checkpoint_path = f"{results_dir}/add check point/"
-    # checkpoint_path = None
+    #checkpoint_path = f"{results_dir}/add check point/"
+    checkpoint_path = None
     
     resume_training = True
 
     # Configure hyperparameters
-    batch_size = 8 
+    batch_size = 16 
     epochs = 1000
     split_ratio = 0.8
     num_workers = 4
@@ -108,9 +108,7 @@ def main():
         trainer.fit(model, datamodule=data_module, ckpt_path=checkpoint_path)
     else:
         print("Starting new training run...")
-        trainer.fit(model, datamodule=data_module)
-        
-    trainer.fit(model, data_module)
+        trainer.fit(model, data_module)
 
     print(f"Completed training. Files can be found in {checkpoint_dir}")
 
