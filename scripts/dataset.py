@@ -4,6 +4,8 @@ import os
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import torchvision.transforms as T
+import torchvision.transforms.functional as TF
+from torchvision.transforms import InterpolationMode
 import pytorch_lightning as pl
 import random
 
@@ -12,16 +14,19 @@ class CoralRandomCropDataset(Dataset):
         self, 
         file_list, 
         crop_size=(512, 512), 
-        samples_per_image=50
+        samples_per_image=50,
+        augment=False
     ):
         """
         Args:
             file_list: A list of tuples [(img_path, mask_path), ...].
             samples_per_image: How many random crops to extract from each image file per epoch.
+            augment: Whether to apply data augmentation.
         """
         self.file_list = file_list
         self.crop_h, self.crop_w = crop_size
         self.samples_per_image = samples_per_image
+        self.augment = augment
         
         # Normalization (ImageNet stats for SegFormer)
         self.transform = T.Compose([
@@ -29,52 +34,85 @@ class CoralRandomCropDataset(Dataset):
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
+        # Image-only augmentation
+        self.color_jitter = T.ColorJitter(
+            brightness=0.15,
+            contrast=0.15,
+            saturation=0.15,
+            hue=0.03
+        )
+
     def __len__(self):
-        # Total length is number of files * crops we want per file
         return len(self.file_list) * self.samples_per_image
 
+    def apply_augmentation(self, image, mask):
+        """
+        Apply the same geometric transforms to image and mask.
+        Apply image-only transforms only to the image.
+        """
+        # Horizontal flip
+        if random.random() < 0.5:
+            image = TF.hflip(image)
+            mask = TF.hflip(mask)
+
+        # Vertical flip
+        if random.random() < 0.5:
+            image = TF.vflip(image)
+            mask = TF.vflip(mask)
+
+        # Random 90-degree rotation
+        if random.random() < 0.5:
+            angle = random.choice([90, 180, 270])
+            image = TF.rotate(image, angle, interpolation=InterpolationMode.BILINEAR)
+            mask = TF.rotate(mask, angle, interpolation=InterpolationMode.NEAREST)
+
+        # Color jitter on image only
+        if random.random() < 0.5:
+            image = self.color_jitter(image)
+
+        return image, mask
+
     def __getitem__(self, idx):
-        # Determine which image file corresponds to this index
         file_idx = idx // self.samples_per_image
         image_path, mask_path = self.file_list[file_idx]
 
-        # Load images
-        # We load inside getitem to avoid holding all large images in RAM
         image = Image.open(image_path).convert("RGB")
         mask = Image.open(mask_path)
         
         img_w, img_h = image.size
         mask_np = np.array(mask)
 
-        # FIND VALID BOUNDS
-        # Find coordinates where mask is not background (>0) to sample interesting areas.
-        # This fulfills "randomly sample from within the bounds of the segmentation masks"
+        # Find valid mask pixels
         valid_y, valid_x = np.where(mask_np > 0)
 
-        # Safety check: if an image is empty (all background), fallback to center crop
+        # Fallback if empty mask
         if len(valid_y) == 0:
             center_y, center_x = img_h // 2, img_w // 2
         else:
             rand_idx = random.randint(0, len(valid_y) - 1)
             center_y, center_x = valid_y[rand_idx], valid_x[rand_idx]
 
-        # Calculate crop coordinates (top-left)
+        # Crop coordinates
         top = center_y - (self.crop_h // 2)
         left = center_x - (self.crop_w // 2)
 
-        # Boundary checks
         top = max(0, min(top, img_h - self.crop_h))
         left = max(0, min(left, img_w - self.crop_w))
 
-        # Perform Crop
+        # Crop image and mask
         image_crop = image.crop((left, top, left + self.crop_w, top + self.crop_h))
         mask_crop = mask.crop((left, top, left + self.crop_w, top + self.crop_h))
 
-        # Transform and Remap
+        # Apply augmentation only if enabled
+        if self.augment:
+            image_crop, mask_crop = self.apply_augmentation(image_crop, mask_crop)
+
+        # Convert to tensors
         image_tensor = self.transform(image_crop)
         mask_tensor = torch.from_numpy(np.array(mask_crop)).long()
 
         return image_tensor, mask_tensor
+
 
 class CoralDataModule(pl.LightningDataModule):
     def __init__(
@@ -86,10 +124,6 @@ class CoralDataModule(pl.LightningDataModule):
         samples_per_image=100,
         crop_size=(512, 512)
     ):
-        """
-        Args:
-            root_dir: The top-level directory containing subdirectories with data.
-        """
         super().__init__()
         self.root_dir = root_dir
         self.batch_size = batch_size
@@ -101,12 +135,10 @@ class CoralDataModule(pl.LightningDataModule):
         self.crop_size = crop_size
 
     def setup(self, stage=None):
-        # 1. DISCOVERY: Walk through directory to find all valid pairs
         all_files = []
         print(f"Scanning {self.root_dir}...")
         
         for root, dirs, files in os.walk(self.root_dir):
-            # Check if both required files exist in this directory
             if "image.png" in files and "seg_r10.png" in files:
                 img_path = os.path.join(root, "image.png")
                 mask_path = os.path.join(root, "seg_r10.png")
@@ -114,8 +146,6 @@ class CoralDataModule(pl.LightningDataModule):
         
         print(f"Found {len(all_files)} valid image/mask pairs.")
 
-        # 2. SPLIT: Shuffle and split by FILE, not by crop
-        # This prevents training and validating on crops from the same image (leakage)
         random.shuffle(all_files)
         split_idx = int(len(all_files) * self.split_ratio)
         
@@ -125,18 +155,18 @@ class CoralDataModule(pl.LightningDataModule):
         print(f"Training on {len(self.train_files)} images.")
         print(f"Validating on {len(self.val_files)} images.")
 
-        # 3. CREATE DATASETS
-        # samples_per_image dictates how much data we generate from each large map
         self.train_ds = CoralRandomCropDataset(
             self.train_files, 
             samples_per_image=self.samples_per_image,
-            crop_size=self.crop_size
+            crop_size=self.crop_size,
+            augment=True
         ) 
         
         self.val_ds = CoralRandomCropDataset(
             self.val_files, 
             samples_per_image=self.samples_per_image,
-            crop_size=self.crop_size
+            crop_size=self.crop_size,
+            augment=False
         )
 
     def train_dataloader(self):

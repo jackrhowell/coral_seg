@@ -1,7 +1,6 @@
 import torch
 import pytorch_lightning as pl
 from transformers import SegformerForSemanticSegmentation
-from torch.optim import AdamW
 
 class CoralSegFormer(pl.LightningModule):
     def __init__(self, learning_rate=3e-4):
@@ -9,7 +8,6 @@ class CoralSegFormer(pl.LightningModule):
         self.save_hyperparameters()
         self.learning_rate = learning_rate
         
-        # Define new labels
         self.id2label = {
             0: "background",
             1: "nv",
@@ -19,11 +17,8 @@ class CoralSegFormer(pl.LightningModule):
         }
         self.label2id = {v: k for k, v in self.id2label.items()}
         
-        # Load Pretrained Model
-        # We use ignore_mismatched_sizes=True because we are changing 
-        # the number of labels from the ImageNet default to 5.
         self.model = SegformerForSemanticSegmentation.from_pretrained(
-            "nvidia/mit-b0", # Source checkpoint
+            "nvidia/mit-b0",
             num_labels=len(self.id2label),
             id2label=self.id2label,
             label2id=self.label2id,
@@ -35,9 +30,7 @@ class CoralSegFormer(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         images, masks = batch
-        
-        # SegFormer calculates loss internally if labels are provided
-        outputs = self(images, masks)
+        outputs = self(pixel_values=images, labels=masks)
         loss = outputs.loss
         
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
@@ -45,12 +38,33 @@ class CoralSegFormer(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         images, masks = batch
-        outputs = self(images, masks)
+        outputs = self(pixel_values=images, labels=masks)
         loss = outputs.loss
-        self.log("val_loss", loss, prog_bar=True)
+        
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
-        # Using AdamW. Source suggested 3e-3, but 3e-4 is often safer 
-        # for stability when fine-tuning a custom dataset.
-        return AdamW(self.model.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.AdamW(
+            self.parameters(),
+            lr=self.learning_rate,
+            weight_decay=1e-4
+        )
+
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="min",
+            factor=0.5,
+            patience=3,
+            min_lr=1e-6
+        )
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss",
+                "interval": "epoch",
+                "frequency": 1,
+            },
+        }

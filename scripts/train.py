@@ -35,7 +35,7 @@ def main():
     resume_training = True
 
     # Configure hyperparameters
-    batch_size = 8 
+    batch_size = 16 
     epochs = 1000
     split_ratio = 0.8
     num_workers = 4
